@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mes convocations — Arbitrage FFBB</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #F5F4F0;
+      --surface: #FFFFFF;
+      --surface2: #ECEAE4;
+      --text: #1A1A18;
+      --muted: #6B6A65;
+      --border: rgba(0,0,0,0.08);
+      --orange: #E85000;
+      --orange-light: #FFF0E8;
+      --blue: #1A6BCC;
+      --blue-light: #E6F1FB;
+      --green: #2D7A3A;
+      --green-light: #EAF3DE;
+      --amber: #9A6200;
+      --amber-light: #FEF3DC;
+      --radius: 14px;
+      --radius-sm: 8px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 0 0 4rem;
+    }
+
+    /* ── HEADER ── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .header-inner {
+      max-width: 900px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 60px;
+    }
+    .logo { display: flex; align-items: center; gap: 10px; }
+    .logo-badge {
+      background: var(--orange);
+      color: white;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 20px;
+      letter-spacing: 0.5px;
+    }
+    .logo h1 { font-size: 16px; font-weight: 600; }
+    .header-actions { display: flex; gap: 8px; align-items: center; }
+    .btn-refresh {
+      display: flex; align-items: center; gap: 6px;
+      font-family: inherit; font-size: 13px; font-weight: 500;
+      padding: 6px 14px; border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface); color: var(--text);
+      cursor: pointer; transition: all 0.15s;
+    }
+    .btn-refresh:hover { background: var(--bg); }
+    .btn-refresh:disabled { opacity: 0.5; cursor: wait; }
+    .btn-refresh svg { transition: transform 0.4s; }
+    .btn-refresh.loading svg { animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── MAIN ── */
+    main { max-width: 900px; margin: 0 auto; padding: 2rem; }
+
+    /* ── STATUS BANNER ── */
+    .status-banner {
+      display: none;
+      align-items: center; gap: 8px;
+      padding: 10px 16px; border-radius: var(--radius-sm);
+      margin-bottom: 1.25rem; font-size: 13px;
+    }
+    .status-banner.show { display: flex; }
+    .status-banner.error { background: #FCEBEB; color: #791F1F; }
+    .status-banner.stale { background: var(--amber-light); color: var(--amber); }
+
+    /* ── STATS ── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 1.75rem;
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+    }
+    .stat-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+      margin-bottom: 8px;
+    }
+    .stat-value { font-size: 28px; font-weight: 600; color: var(--text); line-height: 1; }
+    .stat-value.accent { color: var(--orange); }
+    .stat-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+    /* ── FILTERS ── */
+    .filters { display: flex; gap: 6px; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .filter-btn {
+      font-family: inherit; font-size: 13px; font-weight: 500;
+      padding: 6px 16px; border-radius: 20px;
+      border: 1px solid var(--border);
+      background: transparent; color: var(--muted);
+      cursor: pointer; transition: all 0.15s;
+    }
+    .filter-btn.active { background: var(--text); color: white; border-color: var(--text); }
+    .filter-btn:hover:not(.active) { background: var(--surface); color: var(--text); }
+
+    /* ── LAST UPDATE ── */
+    .last-update { font-size: 12px; color: var(--muted); margin-bottom: 1.5rem; }
+
+    /* ── MONTH GROUP ── */
+    .month-group { margin-bottom: 1.75rem; }
+    .month-label {
+      font-size: 11px; font-weight: 600; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 1px;
+      margin-bottom: 10px; padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* ── CONVOCATION CARD ── */
+    .conv-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      margin-bottom: 8px;
+      display: grid;
+      grid-template-columns: 60px 1fr auto;
+      gap: 16px;
+      align-items: center;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .conv-card:hover { border-color: rgba(0,0,0,0.15); box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+    .conv-card.urgent { border-left: 3px solid var(--orange); padding-left: 15px; }
+
+    .date-box { text-align: center; }
+    .date-day { font-size: 26px; font-weight: 600; color: var(--text); line-height: 1; }
+    .date-month { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+
+    .conv-title { font-size: 15px; font-weight: 500; color: var(--text); margin-bottom: 5px; }
+    .conv-meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .conv-lieu { font-size: 13px; color: var(--muted); }
+    .pill {
+      font-size: 11px; font-weight: 600; padding: 2px 10px;
+      border-radius: 20px; white-space: nowrap;
+    }
+    .pill-urgent   { background: #FCEBEB; color: #791F1F; }
+    .pill-upcoming { background: var(--amber-light); color: var(--amber); }
+    .pill-done     { background: var(--green-light); color: var(--green); }
+    .pill-inconnu  { background: var(--surface2); color: var(--muted); }
+    .pill-level    { background: var(--blue-light); color: var(--blue); }
+
+    .conv-right { text-align: right; }
+    .conv-time { font-size: 16px; font-weight: 600; color: var(--text); }
+    .conv-role { font-size: 12px; color: var(--muted); margin-top: 3px; }
+
+    /* ── SKELETON ── */
+    .skeleton { animation: shimmer 1.4s ease infinite; border-radius: var(--radius); }
+    @keyframes shimmer {
+      0%, 100% { background: var(--surface2); }
+      50% { background: #E0DEDB; }
+    }
+    .skel-stat { height: 80px; }
+    .skel-card { height: 72px; margin-bottom: 8px; }
+
+    /* ── EMPTY ── */
+    .empty { text-align: center; padding: 3rem; color: var(--muted); font-size: 14px; }
+
+    /* ── CONFIG SETUP ── */
+    .setup-box {
+      background: var(--orange-light);
+      border: 1px solid rgba(232,80,0,0.2);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      margin-top: 2rem;
+    }
+    .setup-box h3 { font-size: 15px; font-weight: 600; color: var(--orange); margin-bottom: 8px; }
+    .setup-box p { font-size: 13px; color: var(--text); line-height: 1.7; }
+    .setup-box code {
+      font-family: 'DM Mono', monospace; font-size: 12px;
+      background: rgba(232,80,0,0.1); padding: 1px 6px; border-radius: 4px;
+    }
+
+    @media (max-width: 600px) {
+      main { padding: 1rem; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .conv-card { grid-template-columns: 50px 1fr; }
+      .conv-right { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="logo">
+      <span class="logo-badge">FFBB</span>
+      <h1>Mes convocations</h1>
+    </div>
+    <div class="header-actions">
+      <button class="btn-refresh" id="refresh-btn" onclick="loadAll(true)">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path d="M12.5 7A5.5 5.5 0 1 1 7 1.5a5.5 5.5 0 0 1 4.3 2.1M12.5 1.5v3h-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Actualiser
+      </button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- Status banners -->
+  <div class="status-banner error" id="banner-error">
+    <span>⚠</span> <span id="banner-error-msg">Impossible de contacter le backend.</span>
+  </div>
+  <div class="status-banner stale" id="banner-stale">
+    <span>⏱</span> Données en cache (FBI inaccessible momentanément)
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-grid" id="stats-grid">
+    <div class="skeleton skel-stat"></div>
+    <div class="skeleton skel-stat"></div>
+    <div class="skeleton skel-stat"></div>
+    <div class="skeleton skel-stat"></div>
+  </div>
+
+  <div class="last-update" id="last-update"></div>
+
+  <!-- Filters -->
+  <div class="filters">
+    <button class="filter-btn active" onclick="filterBy('all', this)">Toutes</button>
+    <button class="filter-btn" onclick="filterBy('upcoming', this)">À venir</button>
+    <button class="filter-btn" onclick="filterBy('done', this)">Effectuées</button>
+    <button class="filter-btn" onclick="filterBy('urgent', this)">Cette semaine</button>
+  </div>
+
+  <!-- List -->
+  <div id="list">
+    <div class="skeleton skel-card"></div>
+    <div class="skeleton skel-card"></div>
+    <div class="skeleton skel-card"></div>
+  </div>
+
+  <!-- Setup note -->
+  <div class="setup-box" id="setup-box" style="display:none;">
+    <h3>Configuration requise</h3>
+    <p>
+      Modifiez <code>API_BASE</code> et <code>API_TOKEN</code> en haut de ce fichier HTML
+      avec l'URL de votre backend Render/Railway et votre token secret.<br><br>
+      Ex : <code>const API_BASE = "https://mon-app.onrender.com"</code>
+    </p>
+  </div>
+</main>
+
+<script>
+  // ════════════════════════════════════════════════════════════
+  //  CONFIGURATION — modifiez ces deux lignes après déploiement
+  // ════════════════════════════════════════════════════════════
+  const API_BASE  = "https://VOTRE-APP.onrender.com"; // ← URL backend Render/Railway
+  const API_TOKEN = "changez-moi-en-production";      // ← Même valeur que API_TOKEN dans .env
+  // ════════════════════════════════════════════════════════════
+
+  const MOIS = ["Jan","Fév","Mar","Avr","Mai","Jun","Jul","Aoû","Sep","Oct","Nov","Déc"];
+  const MOIS_LONG = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
+
+  let allConvocations = [];
+  let currentFilter   = "all";
+
+  async function api(path, force = false) {
+    const url = `${API_BASE}${path}${force ? (path.includes("?") ? "&" : "?") + "force_refresh=1" : ""}`;
+    const res = await fetch(url, { headers: { "X-API-Token": API_TOKEN } });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  }
+
+  async function loadAll(force = false) {
+    setLoading(true);
+    hideBanners();
+
+    // Vérifier si l'URL est configurée
+    if (API_BASE.includes("VOTRE-APP")) {
+      document.getElementById("setup-box").style.display = "block";
+      document.getElementById("stats-grid").innerHTML = skeletons(4, "skel-stat");
+      document.getElementById("list").innerHTML = "";
+      setLoading(false);
+      return;
+    }
+    document.getElementById("setup-box").style.display = "none";
+
+    try {
+      const [convData, statsData] = await Promise.all([
+        api("/api/convocations", force),
+        api("/api/stats", false),
+      ]);
+
+      if (convData.stale) showBanner("stale");
+
+      allConvocations = convData.convocations || [];
+      renderStats(statsData);
+      renderList(currentFilter);
+
+      if (convData.fetched_at) {
+        const d = new Date(convData.fetched_at);
+        document.getElementById("last-update").textContent =
+          `Dernière mise à jour : ${d.toLocaleDateString("fr-FR")} à ${d.toLocaleTimeString("fr-FR", {hour:"2-digit", minute:"2-digit"})}`;
+      }
+    } catch (e) {
+      showBanner("error", e.message);
+      if (allConvocations.length) renderList(currentFilter);
+      else document.getElementById("list").innerHTML =
+        '<div class="empty">Impossible de charger les convocations.</div>';
+    }
+
+    setLoading(false);
+  }
+
+  function renderStats(s) {
+    document.getElementById("stats-grid").innerHTML = `
+      <div class="stat-card">
+        <div class="stat-label">Total saison</div>
+        <div class="stat-value">${s.total ?? "–"}</div>
+        <div class="stat-sub">convocations</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">À venir</div>
+        <div class="stat-value">${s.upcoming ?? "–"}</div>
+        <div class="stat-sub">matchs</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Effectuées</div>
+        <div class="stat-value">${s.done ?? "–"}</div>
+        <div class="stat-sub">matchs arbitrés</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Cette semaine</div>
+        <div class="stat-value accent">${s.this_week ?? "–"}</div>
+        <div class="stat-sub">convocation(s) urgente(s)</div>
+      </div>
+    `;
+  }
+
+  function renderList(filter) {
+    let list = allConvocations;
+    if (filter === "upcoming") list = list.filter(c => c.statut === "upcoming" || c.statut === "urgent");
+    else if (filter === "done")     list = list.filter(c => c.statut === "done");
+    else if (filter === "urgent")   list = list.filter(c => c.statut === "urgent");
+
+    if (!list.length) {
+      document.getElementById("list").innerHTML =
+        '<div class="empty">Aucune convocation dans cette catégorie.</div>';
+      return;
+    }
+
+    // Grouper par mois
+    const groups = {};
+    list.forEach(c => {
+      if (!c.date_iso) { groups["Sans date"] = groups["Sans date"] || []; groups["Sans date"].push(c); return; }
+      const d = new Date(c.date_iso);
+      const key = `${MOIS_LONG[d.getMonth()]} ${d.getFullYear()}`;
+      groups[key] = groups[key] || [];
+      groups[key].push(c);
+    });
+
+    let html = "";
+    Object.entries(groups).forEach(([month, items]) => {
+      html += `<div class="month-group"><div class="month-label">${month}</div>`;
+      items.forEach(c => { html += cardHTML(c); });
+      html += "</div>";
+    });
+
+    document.getElementById("list").innerHTML = html;
+  }
+
+  function cardHTML(c) {
+    let day = "–", mon = "";
+    if (c.date_iso) {
+      const d = new Date(c.date_iso + "T12:00:00");
+      day = d.getDate();
+      mon = MOIS[d.getMonth()];
+    }
+
+    const pillLabel = { urgent: "Cette semaine", upcoming: "À venir", done: "Effectuée", inconnu: "?" };
+    const pillClass = { urgent: "pill-urgent", upcoming: "pill-upcoming", done: "pill-done", inconnu: "pill-inconnu" };
+
+    return `
+    <div class="conv-card${c.statut === "urgent" ? " urgent" : ""}">
+      <div class="date-box">
+        <div class="date-day">${day}</div>
+        <div class="date-month">${mon}</div>
+      </div>
+      <div class="conv-info">
+        <div class="conv-title">${esc(c.competition || "Compétition inconnue")}</div>
+        <div class="conv-meta">
+          <span class="conv-lieu">${esc(c.lieu || "")}</span>
+          <span class="pill ${pillClass[c.statut] || "pill-inconnu"}">${pillLabel[c.statut] || c.statut}</span>
+          ${c.level ? `<span class="pill pill-level">${esc(c.level)}</span>` : ""}
+        </div>
+      </div>
+      <div class="conv-right">
+        <div class="conv-time">${esc(c.horaire || "–")}</div>
+        <div class="conv-role">${esc(c.role || "")}</div>
+      </div>
+    </div>`;
+  }
+
+  function filterBy(type, btn) {
+    currentFilter = type;
+    document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    renderList(type);
+  }
+
+  function esc(s) {
+    return String(s)
+      .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+      .replace(/"/g,"&quot;");
+  }
+
+  function setLoading(on) {
+    const btn = document.getElementById("refresh-btn");
+    btn.disabled = on;
+    btn.classList.toggle("loading", on);
+  }
+
+  function hideBanners() {
+    document.getElementById("banner-error").classList.remove("show");
+    document.getElementById("banner-stale").classList.remove("show");
+  }
+
+  function showBanner(type, msg = "") {
+    if (type === "error") {
+      document.getElementById("banner-error-msg").textContent =
+        `Erreur backend : ${msg}. Vérifiez la configuration.`;
+      document.getElementById("banner-error").classList.add("show");
+    } else {
+      document.getElementById("banner-stale").classList.add("show");
+    }
+  }
+
+  function skeletons(n, cls) {
+    return Array(n).fill(`<div class="skeleton ${cls}"></div>`).join("");
+  }
+
+  // Chargement initial
+  loadAll();
+</script>
+</body>
+</html>
